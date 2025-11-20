@@ -5,7 +5,6 @@ import random
 import os
 import math
 
-
 pygame.init()
 
 # ================
@@ -25,6 +24,7 @@ ASSET_PATHS = {
     "nav_home": os.path.join(base_path, "assets", "nav_home.png"),
     "nav_social": os.path.join(base_path, "assets", "nav_social.png"),
     "exit_button": os.path.join(base_path, "assets", "btn_exit.png"),
+    "login_menu_bg": os.path.join(base_path, "assets", "login_menu_bg.png"),
     "main_menu_bg": os.path.join(base_path, "assets", "main_menu_bg.png"),
     "room_bg": os.path.join(base_path, "assets", "room_bg.png"),
     "social_vs_bg": os.path.join(base_path, "assets", "social_vs_bg.png"),
@@ -560,6 +560,7 @@ def safe_load_and_scale(path, target_size):
 
 #배경이미지 (있으면 로드)
 back_button_img = safe_load_and_scale(ASSET_PATHS.get("back_button"), (33, 33))
+login_menu_bg = safe_load_and_scale(ASSET_PATHS.get("login_menu_bg"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 main_menu_bg = safe_load_and_scale(ASSET_PATHS.get("main_menu_bg"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 social_vs_bg = safe_load_and_scale(ASSET_PATHS.get("social_vs_bg"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 pick_a_word_bg = safe_load_and_scale(ASSET_PATHS.get("pick_a_word_bg"), (SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -585,8 +586,8 @@ scene, quiz_bubble_visible = "login", False
 scroll_offset_x = 0
 
 # 버튼들 (이미지 경로를 Button 생성자에 넣어두면 바꿀 수 있음)
-guest_btn = Button((25, 350, 300, 70), "게스트로 로그인", image_path=ASSET_PATHS.get("guest_button"))
-account_btn = Button((25, 440, 300, 70), "계정 로그인 (비활성)", image_path=ASSET_PATHS.get("account_button"))
+guest_btn = Button((25, 335, 300, 67), image_path=ASSET_PATHS.get("guest_button"))
+account_btn = Button((25, 425, 300, 67), image_path=ASSET_PATHS.get("account_button"))
 setting_btn = Button((292, 17, 41, 41), image_path=None)
 items_middle_btn = Button((121, 550, 107, 150), image_path=None)
 items_right_btn = Button((238, 550, 107, 150), image_path=None)
@@ -815,10 +816,9 @@ while running:
 
     if scene == "login":
         # (로고 + 버튼 - 이미지가 있으면 이미지로 표시)
-        pygame.draw.circle(screen, COLORS['ui_accent'], (175, 130), 60, 3)
-        logo = font_medium.render("로고", True, COLORS['text']); screen.blit(logo, logo.get_rect(center=(175, 130)))
-        title = font_large.render("말랑", True, COLORS['text']); screen.blit(title, title.get_rect(center=(175, 230)))
-        guest_btn.draw(screen); account_btn.draw(screen)
+        
+        screen.blit(login_menu_bg, (0,0))
+        guest_btn.transparent_draw(screen); account_btn.transparent_draw(screen)
 
     elif scene == "main_menu":
         # 배경 이미지 있으면 표시, 없으면 기본
