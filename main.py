@@ -5,7 +5,16 @@ import random
 import os
 import math
 
-pygame.init()
+pygame.font.init()
+SCREEN_WIDTH, SCREEN_HEIGHT = 350, 700
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("말랑")
+
+import itemShopManager
+
+from features import font_large ,font_medium ,font_small ,font_tiny ,font_atomic
+from features import Button
+
 
 # ================
 # 기본 경로 설정
@@ -57,9 +66,7 @@ ASSET_PATHS = {
 # ================
 # 화면 설정
 # ================
-SCREEN_WIDTH, SCREEN_HEIGHT = 350, 700
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("말랑")
+
 
 # 색상 및 테마
 RED, BLUE = (220, 80, 80), (100, 140, 250)
@@ -72,7 +79,7 @@ current_theme, COLORS = "light", light_theme_colors
 
 # 폰트 로딩 (assets 폴더 사용)
 try:
-    FONT_PATH = os.path.join(base_path, "assets", "NanumBarunGothic.ttf")
+    FONT_PATH = os.path.join(base_path, "assets", "onkim.ttf")
     font_large = pygame.font.Font(FONT_PATH, 36)
     font_medium = pygame.font.Font(FONT_PATH, 24)
     font_small = pygame.font.Font(FONT_PATH, 17)
@@ -130,174 +137,7 @@ class WordMeaningManager:
 
 word_meaning_manager = WordMeaningManager(os.path.join(base_path, "data", "vocabulary_word_meaning.csv"))
 
-class ItemManager:
-    def __init__(self, filename="player_items.csv"):
-        """
-        아이템 관리자를 초기화합니다.
-        - filename: 아이템 소유 및 착용 정보를 저장할 CSV 파일 이름
-        """
-        self.filename = filename
-        self.item_data = None
-        self._load_items()
-
-    def _load_items(self):
-        """
-        CSV 파일에서 아이템 정보를 로드합니다.
-        파일이 없으면, 기본 아이템 목록으로 새로 생성합니다.
-        """
-        if os.path.exists(self.filename):
-            self.item_data = pd.read_csv(self.filename)
-        else:
-            print(f"'{self.filename}' 파일이 없어 새로 생성합니다.")
-            default_items = {
-                'item_name': ['sunflower', 'glasses'], # 아이템의 고유한 이름
-                'category':  ['hat', 'glasses'], # 아이템 종류 (같은 종류는 중복 착용 불가)
-                'purchased': [False, False],        # 구매 상태 (기본셔츠는 기본 제공)
-                'equipped':  [False, False],
-                'price': [25,30]          # 아이템 가격
-            }
-            self.item_data = pd.DataFrame(default_items)
-            self._save_items()
-    
-    def get_item_price(self, item_name):
-        """
-        특정 아이템의 가격을 가져옵니다.
-        - item_name: 가격을 알고 싶은 아이템의 이름
-        - 반환값: 가격(정수), 아이템이 없으면 -1 또는 None
-        """
-        # 1. 아이템 이름이 데이터에 있는지 확인
-        if item_name not in self.item_data['item_name'].values:
-            print(f"정보 없음: '{item_name}' 아이템을 찾을 수 없습니다.")
-            return -1 # 오류를 의미하는 값 반환
-
-        # === 핵심 로직: 불리언 인덱싱 ===
-        # 2. 'item_name' 컬럼의 값이 item_name과 일치하는 행(row)을 찾는다.
-        item_row = self.item_data[self.item_data['item_name'] == item_name]
-        
-        # 3. 그 행에서 'price' 컬럼의 값을 추출한다.
-        # .iloc[0]은 찾은 행들 중 첫 번째 행의 값을 가져온다는 의미입니다.
-        price = item_row['price'].iloc[0]
-        
-        return int(price)
-
-    def _save_items(self):
-        """ 현재 아이템 정보를 CSV 파일에 저장합니다. """
-        self.item_data.to_csv(self.filename, index=False)
-        print(f"아이템 정보가 '{self.filename}' 파일에 저장되었습니다.")
-
-    def purchase_item(self, item_name):
-        """ 특정 아이템을 구매 처리합니다. (수정된 버전) """
-        # 1. 아이템 존재 여부 확인
-        if item_name not in self.item_data['item_name'].values:
-            print(f"오류: '{item_name}'은(는) 존재하지 않는 아이템입니다.")
-            return False
-
-        # 2. 아이템 가격과 현재 보유 도토리 확인
-        item_price = self.get_item_price(item_name)
-        current_dotori = load_dotori_count()
-
-        # 3. 도토리가 충분한지 '확인'만 합니다. (차감은 아직 안 함)
-        if current_dotori < item_price:
-            print(f"오류: 도토리가 부족하여 아이템을 구매할 수 없습니다. (필요: {item_price}, 보유: {current_dotori})")
-            return False
-
-        # 4. 모든 조건이 통과되었으므로, 실제 구매 절차 진행
-        # 4-1. 아이템 구매 상태 변경
-        item_index = self.item_data[self.item_data['item_name'] == item_name].index
-        self.item_data.loc[item_index, 'purchased'] = True
-        self._save_items() # CSV 파일에 구매 상태 저장
-
-        # 4-2. 도토리 차감 (use_dotori 함수를 딱 한 번만 호출)
-        use_dotori(item_price)
-
-        print(f"'{item_name}' 아이템을 구매했습니다! (도토리 {item_price}개 사용)")
-        return True
-
-    def purchase_item(self, item_name):
-        """ 특정 아이템을 구매만 처리합니다. (수정된 최종 버전) """
-        # 1. 아이템 존재 여부 확인
-        if item_name not in self.item_data['item_name'].values:
-            print(f"오류: '{item_name}'은(는) 존재하지 않는 아이템입니다.")
-            return False
-
-        # 2. 이미 구매한 아이템인지 확인
-        if self.is_purchased(item_name):
-            print(f"정보: '{item_name}'은(는) 이미 구매한 아이템입니다.")
-            return False
-
-        # 3. 아이템 가격과 현재 보유 도토리 확인
-        item_price = self.get_item_price(item_name)
-        current_dotori = load_dotori_count()
-
-        # 4. 도토리가 충분한지 확인
-        if current_dotori < item_price:
-            print(f"오류: 도토리가 부족하여 아이템을 구매할 수 없습니다. (필요: {item_price}, 보유: {current_dotori})")
-            return False
-
-        # 5. 모든 조건 통과 -> 구매 절차 진행
-        # 5-1. 도토리 차감
-        use_dotori(item_price)
-
-        # 5-2. 아이템 구매 상태를 True로 변경
-        item_index = self.item_data[self.item_data['item_name'] == item_name].index
-        self.item_data.loc[item_index, 'purchased'] = True
-        
-        # 5-3. 변경된 내용을 파일에 저장
-        self._save_items()
-        
-        print(f"'{item_name}' 아이템을 구매했습니다! (도토리 {item_price}개 사용)")
-
-        # [핵심 수정] 구매 시 자동으로 착용하던 equip_item() 호출 부분을 삭제했습니다.
-        # 이제 구매만 하고 착용은 하지 않습니다.
-        
-        return True
-    
-    def equip_item(self, item_name):
-        if item_name not in self.item_data['item_name'].values:
-            print(f"오류: '{item_name}'은(는) 존재하지 않는 아이템입니다.")
-            return False
-        
-        item_index = self.item_data[self.item_data['item_name'] == item_name].index
-        self.item_data.loc[item_index, 'equipped'] = True
-        self._save_items()
-
-        print(f"'{item_name}' 아이템을 착용했습니다.")
-        return False
-
-    def unequip_item(self, item_name):
-        """ 특정 아이템을 착용 해제합니다. """
-        if item_name not in self.item_data['item_name'].values:
-            print(f"오류: '{item_name}'은(는) 존재하지 않는 아이템입니다.")
-            return False
-        
-        item_index = self.item_data[self.item_data['item_name'] == item_name].index
-        self.item_data.loc[item_index, 'equipped'] = False
-        self._save_items()
-        print(f"'{item_name}' 아이템을 착용 해제했습니다.")
-        return True
-
-    def is_purchased(self, item_name):
-        """ 특정 아이템의 구매 여부를 확인합니다. """
-        if item_name not in self.item_data['item_name'].values: return False
-        status = self.item_data[self.item_data['item_name'] == item_name]['purchased'].iloc[0]
-        return bool(status)
-
-    def is_equipped(self, item_name):
-        """ 특정 아이템의 착용 여부를 확인합니다. """
-        if item_name not in self.item_data['item_name'].values: return False
-        status = self.item_data[self.item_data['item_name'] == item_name]['equipped'].iloc[0]
-        return bool(status)
-
-    def get_equipped_items(self):
-        """ 현재 착용 중인 모든 아이템의 리스트를 반환합니다. """
-        equipped_df = self.item_data[self.item_data['equipped'] == True]
-        return equipped_df['item_name'].tolist()
-        
-    def get_all_items_status(self):
-        """ 모든 아이템의 전체 상태를 리스트-딕셔너리 형태로 반환합니다. """
-        return self.item_data.to_dict('records')
-
-IM = ItemManager()
+IM = itemShopManager.ItemManager()
 
 DOTORI_FILE = "dotori_count.txt"
 dotori_obtained = False  # 도토리 획득 여부 전역 변수로 추가
@@ -370,82 +210,6 @@ def draw_text_in_container(lines, font, color, surface, container_rect, align="l
 
             y_offset += font.get_height()
 
-# ================
-# Image-aware Button 클래스
-# ================
-class Button:
-    def __init__(self, rect, text=None, color=None, text_color=None, image_path=None):
-        self.rect = pygame.Rect(rect)
-        self.text = text
-        self.base_color = color
-        self.text_color_override = text_color
-        self.image_path = image_path
-        self._image = None
-        if image_path:
-            self._image = self._load_and_scale(image_path)
-
-    def _load_and_scale(self, path):
-        try:
-            if not os.path.exists(path):
-                return None
-            img = pygame.image.load(path).convert_alpha()
-            w, h = self.rect.width, self.rect.height
-            iw, ih = img.get_width(), img.get_height()
-            # 비율 유지하여 맞추기
-            if ih/iw >= h/w:
-                # 이미지가 세로로 긴 경우: 높이에 맞추고 너비는 비율대로
-                target_h = h
-                target_w = max(1, int(iw / ih * target_h))
-            else:
-                target_w = w
-                target_h = max(1, int(ih / iw * target_w))
-            scaled = pygame.transform.smoothscale(img, (target_w, target_h))
-            return scaled
-        except Exception:
-            return None
-
-    def reload_image(self):
-        if self.image_path:
-            self._image = self._load_and_scale(self.image_path)
-
-    def draw(self, surface):
-        # 배경 사각형 (이미지 없을 때의 대체)
-        color = self.base_color if self.base_color else COLORS['ui_accent']
-        text_color = self.text_color_override if self.text_color_override else COLORS['text']
-        if self._image:
-            # 이미지가 버튼보다 작다면 가운데 정렬
-            img = self._image
-            img_rect = img.get_rect(center=self.rect.center)
-            surface.blit(img, img_rect)
-            # 이미지 위 텍스트 (필요 시)
-            if self.text:
-                txt = font_tiny.render(self.text, True, text_color)
-                surface.blit(txt, txt.get_rect(center=self.rect.center))
-        else:
-            # 기본 렌더
-            pygame.draw.rect(surface, color, self.rect, border_radius=8)
-            if self.text:
-                padding = 8
-                target_rect = self.rect.inflate(-padding, -padding)
-                current_font = font_small
-                text_surface = current_font.render(self.text, True, text_color)
-                if text_surface.get_width() > target_rect.width:
-                    current_font = font_tiny
-                    text_surface = current_font.render(self.text, True, text_color)
-                surface.blit(text_surface, text_surface.get_rect(center=self.rect.center))
-
-    def transparent_draw(self, surface, border_radius=-1):
-        # 디버그용 테두리 표시
-        #pygame.draw.rect(surface, (255, 0, 0), self.rect, width=1, border_radius=border_radius)
-
-        color = self.base_color if self.base_color else COLORS['ui_accent']
-        text_color = self.text_color_override if self.text_color_override else COLORS['text']
-        if self.text:
-            txt = font_tiny.render(self.text, True, text_color)
-            surface.blit(txt, txt.get_rect(center=self.rect.center))
-
-    def is_clicked(self, pos):
-        return self.rect.collidepoint(pos)
 
 # ================
 # 퀴즈 로직 상태 변수
@@ -578,7 +342,8 @@ glasses_price_img = safe_load_and_scale(ASSET_PATHS.get("glasses_price"), (100, 
 char_default_img = safe_load_and_scale(ASSET_PATHS.get("char_default"), (160, 200))
 check_icon_img = safe_load_and_scale(ASSET_PATHS.get("check_icon"), (31, 31))
 x_icon_img = safe_load_and_scale(ASSET_PATHS.get("x_icon"), (33, 27))
-
+AdornmentScrollSurface = IM.scrollSurface('Adornment')
+bodyScrollSurface = IM.scrollSurface('body')
 # ================
 # 상태 및 버튼 정의 (이미지 경로 지정 가능)
 # ================
@@ -589,8 +354,18 @@ scroll_offset_x = 0
 guest_btn = Button((25, 335, 300, 67), image_path=ASSET_PATHS.get("guest_button"))
 account_btn = Button((25, 425, 300, 67), image_path=ASSET_PATHS.get("account_button"))
 setting_btn = Button((292, 17, 41, 41), image_path=None)
-items_middle_btn = Button((121, 550, 107, 150), image_path=None)
-items_right_btn = Button((238, 550, 107, 150), image_path=None)
+#items_middle_btn = Button((121, 550, 107, 150), image_path=None)
+#items_right_btn = Button((238, 550, 107, 150), image_path=None)
+scroll_btn = Button((0,550,300,150),image_path=None)
+x_mar = 17
+y_mar = 493
+nav_btn_in_room = [
+    Button((x_mar,y_mar,(SCREEN_WIDTH-2*x_mar)/3,40)),
+    Button((x_mar+(SCREEN_WIDTH-2*x_mar)/3,y_mar,(SCREEN_WIDTH-2*x_mar)/3,40)),
+    Button((x_mar+(SCREEN_WIDTH-2*x_mar)/3*2,y_mar,(SCREEN_WIDTH-2*x_mar)/3,40)),
+]
+nav_btn_in_home =[]
+from_home_to_room = Button((75,238,200,200))
 
 # 네비게이션 (여덟 개)
 x_main = 25
@@ -607,12 +382,6 @@ nav_buttons = [
 ]
 
 # 퀴즈 드롭다운(버블) 관련
-'''quiz_btn_rect = nav_buttons[2].rect
-bubble_w, bubble_h = 230, 70
-bubble_y = quiz_btn_rect.top - bubble_h - 30
-bubble_rect = pygame.Rect(quiz_btn_rect.centerx - bubble_w/2, bubble_y, bubble_w, bubble_h)
-practice_bubble_btn = Button((bubble_rect.left + 10, bubble_rect.top + 15, 100, 40), "연습 모드", image_path=None)
-test_bubble_btn = Button((bubble_rect.right - 110, bubble_rect.top + 15, 100, 40), "테스트 모드", image_path=None)'''
 back_btn = Button((20, 19, 33, 33),image_path=None)
 back_btn_settings = Button((20, 19, 33, 33),text='back',image_path=None)
 back_btn_my_room = Button((18, 13, 33, 33),image_path=None)
@@ -639,21 +408,107 @@ item_images = [
 # ================
 running = True
 quiz_bubble_visible = False
+is_dragging = False
+has_moved = False
+momentum_velocity_y = 0
+FRICTION = 0.8
+MOMENTUM_CUTOFF = 2
+last_mouse_y = 0
+scroll_offset_y =0
+item_clicked_flag = False
+category_in_room = 'Adornment'
+category_surf_in_room = AdornmentScrollSurface
+category_in_home = ''
+updateHamster = IM.get_equipped_hamster_surface()
+updateHamster_in_home = pygame.transform.smoothscale(updateHamster, (230, 230))
 
 # 퀴즈 준비 (만약 start_quiz 호출 없이 들어갔을 때 오류 방지)
 if quiz_questions:
     prepare_current_question()
 
 while running:
-    for event in pygame.event.get():
+    event_list = pygame.event.get()
+
+    # 2. 저장된 이벤트들의 'type'만 뽑아서 리스트를 만듭니다.
+    event_types = [e.type for e in event_list]
+
+    # 3. 특정 타입(예: 마우스 클릭)이 '없는지' 확인합니다.
+    if pygame.MOUSEMOTION not in event_types:
+        is_dragging2 = False
+
+    for event in event_list:
         if event.type == pygame.QUIT:
             running = False
 
         # 마우스 휠로 집 화면 아이템 슬라이드 처리
         if scene == "my_room" and event.type == pygame.MOUSEWHEEL:
-            # 한 슬롯 너비는 80 (같은 방식으로 하드코딩된 UI를 준수)
-            max_scroll = max(0, len(item_images) * 80 - (SCREEN_WIDTH - 40))
+            # 한 슬롯 너비는 110 (같은 방식으로 하드코딩된 UI를 준수)
+            max_scroll = max(0, len(item_images) * 110 - (SCREEN_WIDTH - 40))
             scroll_offset_x = max(min(0, scroll_offset_x + event.y * 30), -max_scroll)
+        
+        elif scene == "my_room" and event.type == pygame.MOUSEBUTTONDOWN and event.button ==1 and scroll_btn.is_clicked(event.pos):
+            is_dragging = True
+            last_mouse_y = event.pos[1]
+            momentum_velocity_y = 0  # 기존 관성 속도 제거
+            has_moved = False
+        
+        # --- 2) 마우스 드래그/움직임 ---
+        if event.type == pygame.MOUSEMOTION:
+            is_dragging2 = True
+            if is_dragging:
+                has_moved = True
+                # 현재 프레임에서 마우스가 움직인 거리 (Delta) 계산
+                delta_y = event.pos[1] - last_mouse_y
+                
+                # 스크롤 오프셋 즉시 이동 (화면을 따라 움직임)
+                temp = scroll_offset_y
+                scroll_offset_y -= delta_y
+                if scroll_offset_y >= AdornmentScrollSurface.get_height()-150 or scroll_offset_y <= 0:
+                    scroll_offset_y =temp
+                    delta_y =0
+                
+                # 다음 프레임을 위한 마지막 위치 업데이트
+                last_mouse_y = event.pos[1]
+                
+                # ★ 관성 속도를 최근 움직인 속도로 갱신 ★
+                # (delta_y를 그대로 사용하면 간단하게 구현 가능)
+                momentum_velocity_y = delta_y 
+        
+        
+                
+        # --- 3) 마우스 버튼 떼기/터치 해제 (관성 시작) ---
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            if scene == "my_room" and  momentum_velocity_y <= 0.1 and has_moved == False and clicked == False:
+                
+                if back_btn_my_room.is_clicked(pos):
+                    scene = "main_menu"
+                # 아이템 구매/착용 처리
+                item_pos = (pos[0],pos[1]-539+scroll_offset_y)
+                for item in IM.item_class_list:
+                    if item.is_clicked(item_pos) and not IM.is_purchased(item) and clicked == False and item.broad_category == category_in_room:
+
+                        IM.purchase_item(item)
+                        updateHamster = IM.get_equipped_hamster_surface()
+                        updateHamster_in_home = pygame.transform.smoothscale(updateHamster, (200, 200))
+                    elif item.is_clicked(item_pos) and IM.is_purchased(item) and clicked == False and item.broad_category == category_in_room:
+                        if IM.is_equipped(item) and category_in_room != 'body':
+                            IM.unequip_item(item)
+                        else:
+                            IM.equip_item(item)
+                        updateHamster = IM.get_equipped_hamster_surface()
+                        updateHamster_in_home = pygame.transform.smoothscale(updateHamster, (200, 200))
+            is_dragging = False
+        
+        if not is_dragging:
+            # 1. 관성 속도만큼 스크롤 오프셋 이동
+            scroll_offset_y -= momentum_velocity_y
+
+            # 2. 마찰(Friction) 적용: 속도를 점진적으로 줄임
+            momentum_velocity_y *= FRICTION 
+
+            # 3. 속도가 너무 느려지면 멈춤 (0으로 고정)
+            if abs(momentum_velocity_y) < MOMENTUM_CUTOFF:
+                momentum_velocity_y = 0
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pos = event.pos
@@ -669,6 +524,7 @@ while running:
                         start_quiz(mode="test", level=None)
                 elif nav_buttons[1].is_clicked(pos):
                     scene = "my_room"
+                    clicked = True
                 elif nav_buttons[2].is_clicked(pos):
                     scene = "social_vs"
                 elif nav_buttons[3].is_clicked(pos):
@@ -688,7 +544,7 @@ while running:
                 elif setting_btn.is_clicked(pos):
                     scene = "settings"
             # 공통 뒤로가기
-            if scene in ["social_vs", "settings", "practice_level_selection", "practice_test_selection", "quiz_results", "ranking", "my_home"]:
+            if scene in ["social_vs", "settings", "practice_level_selection", "practice_test_selection", "quiz_results", "ranking", "my_home","my_room"]:
                 if back_btn.is_clicked(pos):
                     scene = "main_menu"
             # 연습 레벨 선택
@@ -758,25 +614,21 @@ while running:
                 elif nav_buttons[7].is_clicked(pos):
                     scene = "my_room"
             elif scene == "my_room":
-                if back_btn_my_room.is_clicked(pos):
-                    scene = "main_menu"
-                # 아이템 구매/착용 처리
-                for item in IM.item_data['item_name']:
-                    if items_middle_btn.is_clicked(pos) and not IM.is_purchased(item) and item == 'sunflower':
-                        IM.purchase_item(item)
-                    elif items_right_btn.is_clicked(pos) and not IM.is_purchased(item) and item == 'glasses' and clicked == False:
-                        IM.purchase_item(item)
-                    elif items_middle_btn.is_clicked(pos) and IM.is_purchased(item) and item == 'sunflower':
-                        if IM.is_equipped(item):
-                            IM.unequip_item(item)
-                        else:
-                            IM.equip_item(item)
-                    elif items_right_btn.is_clicked(pos) and IM.is_purchased(item) and item == 'glasses' and clicked == False:
-                        if IM.is_equipped(item):
-                            IM.unequip_item(item)
-                        else:
-                            IM.equip_item(item)
-                    
+                if nav_btn_in_room[0].is_clicked(pos):
+                    category_in_room = 'body'
+                    category_surf_in_room = bodyScrollSurface
+                    scroll_offset_y = 0
+                elif nav_btn_in_room[1].is_clicked(pos):
+                    category_in_room = 'Adornment'
+                    category_surf_in_room = AdornmentScrollSurface
+                    scroll_offset_y = 0
+                elif nav_btn_in_room[2].is_clicked(pos):
+                    category_in_room = 'Adornment'
+                    category_surf_in_room = AdornmentScrollSurface
+                    scroll_offset_y = 0
+            elif scene == "my_home":
+                if from_home_to_room.is_clicked(pos):
+                    scene = "my_room"
             # 설정 화면 테마 토글
             elif scene == "settings":
                 '''if theme_btn.is_clicked(pos):
@@ -789,13 +641,10 @@ while running:
                 # (이미 exit handlers 있지만 안전하게 처리)
                 if exit_quiz_flow_btn.is_clicked(pos):
                     scene = "main_menu"
-            # 연습/테스트 bubble 선택
-            '''if quiz_bubble_visible and practice_bubble_btn.is_clicked(pos):
-                start_quiz(mode="practice", level=1)
-            if quiz_bubble_visible and test_bubble_btn.is_clicked(pos):
-                start_quiz(mode="test", level=None)'''
+            
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             clicked = False
+
         # 퀴즈 자동 진행 타이머 이벤트
         if event.type == pygame.USEREVENT:
             pygame.time.set_timer(pygame.USEREVENT, 0)
@@ -834,15 +683,21 @@ while running:
     elif scene == "my_room":
         back_btn_my_room.transparent_draw(screen)
         equipped =  IM.get_equipped_items()
-        if 'glasses' in equipped and 'sunflower' in equipped:
+        screen.blit(my_room_bg,(0,0))
+        screen.blit(updateHamster,(175-updateHamster.get_width()/2,148))
+        for i in nav_btn_in_room:
+            i.transparent_draw(screen)
+        '''if 'glasses' in equipped and 'sunflower' in equipped:
             screen.blit(hamster_with_glasses_and_sunflower,(0,0))
         elif 'glasses' in equipped:
             screen.blit(hamster_with_glasses,(0,0))
         elif 'sunflower' in equipped:
             screen.blit(hamster_with_sunflower,(0,0))
         else:
-            screen.blit(my_room_bg,(0,0))
-        for item in IM.item_data['item_name']:
+            screen.blit(my_room_bg,(0,0))'''
+        
+        screen.blit(category_surf_in_room,(0,539),area=(0,scroll_offset_y,350,170))
+        '''for item in IM.item_data['item_name']:
             if not IM.is_purchased(item):
                 if item == 'sunflower':
                     screen.blit(sunflower_price_img, (124, SCREEN_HEIGHT - 40))
@@ -858,18 +713,21 @@ while running:
                 if item == 'sunflower':
                     screen.blit(lay_off_img, lay_off_img.get_rect(center=( SCREEN_WIDTH/2,SCREEN_HEIGHT - 27)))
                 elif item == 'glasses':
-                    screen.blit(lay_off_img, lay_off_img.get_rect(center=( SCREEN_WIDTH*(2/3)+lay_off_img.get_width()/2+28,SCREEN_HEIGHT - 27)))
+                    screen.blit(lay_off_img, lay_off_img.get_rect(center=( SCREEN_WIDTH*(2/3)+lay_off_img.get_width()/2+28,SCREEN_HEIGHT - 27)))'''
         
         rect = pygame.Rect(280, 25, 40, 22)
         draw_text_in_container(f"{load_dotori_count()}", font_tiny, (255,255,255), screen, rect, align="center")
-        items_middle_btn.transparent_draw(screen)
+        '''items_middle_btn.transparent_draw(screen)
         items_right_btn.transparent_draw(screen)
-        screen.blit(flushing_price_img, (8,SCREEN_HEIGHT-40))
+        screen.blit(flushing_price_img, (8,SCREEN_HEIGHT-40))'''
     
     elif scene == "my_home":
         screen.blit(my_home_bg,(0,0))
+        screen.blit(updateHamster_in_home,(175-updateHamster_in_home.get_width()/2,220))
         back_btn.transparent_draw(screen)
-
+        from_home_to_room.transparent_draw(screen)
+        rect = pygame.Rect(280, 25, 40, 22)
+        draw_text_in_container(f"{load_dotori_count()}", font_tiny, (255,255,255), screen, rect, align="center")
         # (아이템을 클릭했을 때 동작하도록 하려면 여기에 is_clicked 검사 추가 가능)
 
     elif scene == "social_vs":
@@ -894,7 +752,6 @@ while running:
     elif scene == "practice_test_selection":
         back_btn.draw(screen)
         title = font_large.render("퀴즈 모드 선택", True, COLORS['text']); screen.blit(title, title.get_rect(center=(200, 80)))
-        practice_bubble_btn.draw(screen); test_bubble_btn.draw(screen)
 
     elif scene == "practice_level_selection":
         screen.blit(back_button_img, (20, 19)) if back_button_img else back_btn.transparent_draw(screen)
@@ -934,7 +791,7 @@ while running:
             
 
             q_lines = get_text_lines(question.get('문제', ''), font_small, 240)
-            q_rect = pygame.Rect(55, current_y, 240, len(q_lines) * font_small.get_height())
+            q_rect = pygame.Rect(55, current_y, 240, len(q_lines) * font_small.get_height()+5)
             draw_text_in_container(q_lines, font_small, (255,244,244), screen, q_rect,align="left")
             current_y = q_rect.bottom 
 
