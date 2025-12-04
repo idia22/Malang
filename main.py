@@ -357,7 +357,7 @@ glasses_price_img = safe_load_and_scale(ASSET_PATHS.get("glasses_price"), (100, 
 char_default_img = safe_load_and_scale(ASSET_PATHS.get("char_default"), (160, 200))
 check_icon_img = safe_load_and_scale(ASSET_PATHS.get("check_icon"), (31, 31))
 x_icon_img = safe_load_and_scale(ASSET_PATHS.get("x_icon"), (33, 27))
-next_question_btn_img = safe_load_and_scale(ASSET_PATHS.get("next_question_btn"),(126,42))
+next_question_btn_img = safe_load_and_scale(ASSET_PATHS.get("next_question_btn"),(121,41))
 wallpaperScrollSurface = IM.scrollSurface('wallpaper')
 flooringScrollSurface = IM.scrollSurface('flooring')
 furnitureScrollSurface = IM.scrollSurface('furniture')
@@ -955,7 +955,7 @@ while running:
                 btn.base_color = original_color
             next_question_btn.transparent_draw(screen)
             if answer_checked == True:
-                screen.blit(next_question_btn_img,(115,532))
+                screen.blit(next_question_btn_img,(114,532))
 
         #exit_quiz_flow_btn.draw(screen)
 
