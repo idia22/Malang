@@ -439,7 +439,7 @@ quiz_bubble_visible = False
 is_dragging = False
 has_moved = False
 momentum_velocity_y = 0
-FRICTION = 0.8
+FRICTION = 0.95
 MOMENTUM_CUTOFF = 2
 last_mouse_y = 0
 scroll_offset_y =0
@@ -451,8 +451,8 @@ category_surf_in_home = furnitureScrollSurface
 updateHamster = IM.get_equipped_hamster_surface()
 updateHamster_in_home = pygame.transform.smoothscale(updateHamster, (230, 230))
 level_value = 0
-
-
+delta_y = 0
+wheel = False
 # 퀴즈 준비 (만약 start_quiz 호출 없이 들어갔을 때 오류 방지)
 if quiz_questions:
     prepare_current_question()
@@ -466,21 +466,32 @@ while running:
     # 3. 특정 타입(예: 마우스 클릭)이 '없는지' 확인합니다.
     if pygame.MOUSEMOTION not in event_types:
         is_dragging2 = False
-
+    if pygame.MOUSEWHEEL not in event_types and wheel:
+        wheel = False
+        is_dragging = False
+        has_moved = False
     for event in event_list:
         if event.type == pygame.QUIT:
             running = False
-
+        # --- 1) 마우스 휠 이벤트 ---
         # 마우스 휠로 집 화면 아이템 슬라이드 처리
-        elif scene == "my_room" and event.type == pygame.MOUSEWHEEL:
+        elif (scene == "my_room" or scene == "my_home") and event.type == pygame.MOUSEWHEEL and scroll_btn.is_clicked(pygame.mouse.get_pos()):
             # 한 슬롯 너비는 110 (같은 방식으로 하드코딩된 UI를 준수)
-            '''max_scroll = max(0, len(item_images) * 110 - (SCREEN_WIDTH - 40))
-            scroll_offset_x = max(min(0, scroll_offset_x + event.y * 30), -max_scroll)'''
+            is_dragging = True
+            has_moved = True
+            wheel = True
+            # 2. ★핵심★ 위치(scroll_offset_y)를 건드리지 않습니다!
+            # 오직 '속도'에만 값을 누적시킵니다.
+            # 휠을 연속으로 빠르게 굴리면 이 값이 +20, +40, +60... 이렇게 쌓여서 빨라집니다.
+            momentum_velocity_y += (event.y * 7)
             
-            scroll_offset_y -= event.y * 10
+            scroll_offset_y -= event.y * 7
 
             # 2. 변경된 값이 범위를 벗어났는지 확인하고 잡아줍니다. (Clamping)
-            max_scroll_limit = category_surf_in_room.get_height() - 150
+            if scene == "my_home":
+                max_scroll_limit = max(0,category_surf_in_home.get_height() - 150)
+            else:
+                max_scroll_limit = max(0,category_surf_in_room.get_height() - 150)
 
             if scroll_offset_y < 0:
                 scroll_offset_y = 0
@@ -497,7 +508,7 @@ while running:
                 scroll_offset_y = category_surf_in_room.get_height() - 150
             elif (scroll_offset_y < 0):
                 scroll_offset_y = 0'''
-
+        
         
         elif (scene == "my_room" or scene == "my_home") and event.type == pygame.MOUSEBUTTONDOWN and event.button ==1 and scroll_btn.is_clicked(event.pos):
             is_dragging = True
@@ -506,7 +517,7 @@ while running:
             has_moved = False
         
         # --- 2) 마우스 드래그/움직임 ---
-        if event.type == pygame.MOUSEMOTION:
+        if event.type == pygame.MOUSEMOTION and is_dragging:
             is_dragging2 = True
             if is_dragging:
                 has_moved = True
@@ -531,14 +542,13 @@ while running:
                 
                 # ★ 관성 속도를 최근 움직인 속도로 갱신 ★
                 # (delta_y를 그대로 사용하면 간단하게 구현 가능)
-                momentum_velocity_y = delta_y 
+                momentum_velocity_y = 2*delta_y 
         
         
                 
         # --- 3) 마우스 버튼 떼기/터치 해제 (관성 시작) ---
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            if scene == "my_room" and  momentum_velocity_y <= 0.1 and has_moved == False and clicked == False:
-                
+            if scene == "my_room" and momentum_velocity_y <= 0.1 and has_moved == False and clicked == False:
                 if back_btn_my_room.is_clicked(pos):
                     scene = "main_menu"
                 # 아이템 구매/착용 처리
@@ -573,19 +583,21 @@ while running:
                         else:
                             IM.equip_item(item)
                         homeSurface = IM.home_surface()
-                        
             is_dragging = False
-        
-        if not is_dragging:
-            # 1. 관성 속도만큼 스크롤 오프셋 이동
-            scroll_offset_y -= momentum_velocity_y
+            '''if not has_moved:
+                momentum_velocity_y = delta_y
+                delta_y =0 # 드래그 중이 아닐 때만 관성 속도 설정'''
+          # 감속 효과
+        #if not is_dragging:
+                # 1. 관성 속도만큼 스크롤 오프셋 이동
+        '''scroll_offset_y -= momentum_velocity_y
 
-            # 2. 마찰(Friction) 적용: 속도를 점진적으로 줄임
-            momentum_velocity_y *= FRICTION 
+                # 2. 마찰(Friction) 적용: 속도를 점진적으로 줄임
+        momentum_velocity_y *= FRICTION
 
             # 3. 속도가 너무 느려지면 멈춤 (0으로 고정)
-            if abs(momentum_velocity_y) < MOMENTUM_CUTOFF:
-                momentum_velocity_y = 0
+        if abs(momentum_velocity_y) < MOMENTUM_CUTOFF:
+            momentum_velocity_y = 0'''
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pos = event.pos
@@ -1016,6 +1028,35 @@ while running:
 
     '''if quiz_bubble_visible:
         draw_quiz_bubble(screen)'''
+    if is_dragging:
+        # 드래그 중일 때는 '현재 움직임'이 없으면 속도를 빠르게 죽입니다.
+        # 움직이고 있다면 이벤트 루프에서 momentum_velocity_y가 계속 갱신되므로 이 코드를 이겨내고 속도가 유지됩니다.
+        momentum_velocity_y *= 0.6 
+    else:
+        # 손을 뗐을 때 (관성 모드)
+        scroll_offset_y -= momentum_velocity_y
+        momentum_velocity_y *= 0.95 # 자연스러운 감속 (0.9 ~ 0.99 사이 조절)
+
+        # 아주 느려지면 완전히 멈춤
+        if abs(momentum_velocity_y) < 0.1:
+            momentum_velocity_y = 0
+
+        # --- [범위 제한 (Clamping)] ---
+        if scene == "my_home":
+            limit_height = category_surf_in_home.get_height()
+        else: # my_room
+            limit_height = category_surf_in_room.get_height()
+            
+        max_scroll = max(0, limit_height - 170)
+
+        # 위쪽 벽 충돌
+        if scroll_offset_y < 0:
+            scroll_offset_y = 0
+            momentum_velocity_y = 0
+        # 아래쪽 벽 충돌
+        elif scroll_offset_y > max_scroll:
+            scroll_offset_y = max_scroll
+            momentum_velocity_y = 0
 
     pygame.display.flip()
 
