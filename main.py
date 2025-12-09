@@ -4,7 +4,7 @@ import pandas as pd
 import random
 import os
 import math
-import pygame_gui
+
 
 pygame.font.init()
 SCREEN_WIDTH, SCREEN_HEIGHT = 350, 700
@@ -52,6 +52,8 @@ ASSET_PATHS = {
     "select_the_meaning_bg": os.path.join(base_path, "assets", "select_the_meaning_bg.png"),
     "check_icon": os.path.join(base_path, "assets", "check_img.png"),
     "x_icon": os.path.join(base_path, "assets", "x_icon.png"),
+    "correct_img": os.path.join(base_path,"assets","correct.png"),
+    "incorrect_img": os.path.join(base_path,"assets","incorrect.png"),
     "next_question_btn": os.path.join(base_path,"assets","next_question_btn.png"),
     "char_default": os.path.join(base_path, "assets", "char_default.png"),
     "item_shirt": os.path.join(base_path, "assets", "item_shirt.png"),
@@ -359,6 +361,8 @@ glasses_price_img = safe_load_and_scale(ASSET_PATHS.get("glasses_price"), (100, 
 char_default_img = safe_load_and_scale(ASSET_PATHS.get("char_default"), (160, 200))
 check_icon_img = safe_load_and_scale(ASSET_PATHS.get("check_icon"), (31, 31))
 x_icon_img = safe_load_and_scale(ASSET_PATHS.get("x_icon"), (33, 27))
+correct_img = safe_load_and_scale(ASSET_PATHS.get("correct_img"), (303, 68))
+incorrect_img = safe_load_and_scale(ASSET_PATHS.get("incorrect_img"), (303, 68))
 next_question_btn_img = safe_load_and_scale(ASSET_PATHS.get("next_question_btn"),(121,41))
 wallpaperScrollSurface = IM.scrollSurface('wallpaper')
 flooringScrollSurface = IM.scrollSurface('flooring')
@@ -468,10 +472,32 @@ while running:
             running = False
 
         # 마우스 휠로 집 화면 아이템 슬라이드 처리
-        if scene == "my_room" and event.type == pygame.MOUSEWHEEL:
+        elif scene == "my_room" and event.type == pygame.MOUSEWHEEL:
             # 한 슬롯 너비는 110 (같은 방식으로 하드코딩된 UI를 준수)
-            max_scroll = max(0, len(item_images) * 110 - (SCREEN_WIDTH - 40))
-            scroll_offset_x = max(min(0, scroll_offset_x + event.y * 30), -max_scroll)
+            '''max_scroll = max(0, len(item_images) * 110 - (SCREEN_WIDTH - 40))
+            scroll_offset_x = max(min(0, scroll_offset_x + event.y * 30), -max_scroll)'''
+            
+            scroll_offset_y -= event.y * 10
+
+            # 2. 변경된 값이 범위를 벗어났는지 확인하고 잡아줍니다. (Clamping)
+            max_scroll_limit = category_surf_in_room.get_height() - 150
+
+            if scroll_offset_y < 0:
+                scroll_offset_y = 0
+            elif scroll_offset_y > max_scroll_limit:
+                scroll_offset_y = max_scroll_limit
+
+
+            '''if not(scroll_offset_y >= category_surf_in_room.get_height() - 150) and not (scroll_offset_y < 0):
+                if event.y < 0:
+                    scroll_offset_y += 15
+                else:
+                    scroll_offset_y -= 15
+            elif (scroll_offset_y > category_surf_in_room.get_height() - 150):
+                scroll_offset_y = category_surf_in_room.get_height() - 150
+            elif (scroll_offset_y < 0):
+                scroll_offset_y = 0'''
+
         
         elif (scene == "my_room" or scene == "my_home") and event.type == pygame.MOUSEBUTTONDOWN and event.button ==1 and scroll_btn.is_clicked(event.pos):
             is_dragging = True
@@ -885,8 +911,37 @@ while running:
                 else:
                     btn.base_color = COLORS['ui_bg']
                 btn.transparent_draw(screen)
-
+                x_err = 3
+                y_err =1
                 if answer_checked and btn is selected_answer_button:
+                    if (not selected_answer_correct) and selected_answer_explanation:
+                        text_lines = get_text_lines(selected_answer_explanation, font_small, btn.rect.width - 60)
+                        max_text_width = max((font_small.size(line)[0] for line in text_lines), default=0)
+                        text_height = len(text_lines) * font_small.get_height()
+                        box_width = max_text_width 
+                        overlay_rect = pygame.Rect(0, 0, box_width, text_height)
+
+                        overlay_rect.center = btn.rect.center
+                        overlay_rect.x -= x_err
+                        overlay_rect.y -= y_err
+                        screen.blit(incorrect_img,(btn.rect.x - x_err,btn.rect.y - y_err))
+                        
+                        draw_text_in_container(
+                            text_lines,
+                            font_small,
+                            0,
+                            screen,
+                            overlay_rect,
+                            align="left"
+                        )
+                    else:
+                        if selected_answer_correct:
+                            screen.blit(correct_img,(btn.rect.x-x_err,btn.rect.y-y_err))
+                        
+                        else:
+                            screen.blit(incorrect_img,(btn.rect.x-x_err,btn.rect.y-y_err))
+                        btn.transparent_draw(screen)
+                '''if answer_checked and btn is selected_answer_button:
                     if (not selected_answer_correct) and selected_answer_explanation:
                         text_lines = get_text_lines(selected_answer_explanation, font_small, btn.rect.width - 60)
                         max_text_width = max((font_small.size(line)[0] for line in text_lines), default=0)
@@ -927,7 +982,7 @@ while running:
                             min_left = btn.rect.left + 6
                             if icon_rect.left < min_left:
                                 icon_rect.left = min_left
-                            screen.blit(icon_surface, icon_rect)
+                            screen.blit(icon_surface, icon_rect)'''
                         
                 btn.base_color = original_color
             next_question_btn.transparent_draw(screen)
