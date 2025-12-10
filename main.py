@@ -37,6 +37,7 @@ ASSET_PATHS = {
     "exit_button": os.path.join(base_path, "assets", "btn_exit.png"),
     "login_menu_bg": os.path.join(base_path, "assets", "login_menu_bg.png"),
     "main_menu_bg": os.path.join(base_path, "assets", "main_menu_bg.png"),
+    "quiz_results_bg": os.path.join(base_path, "assets", "quiz_results_bg.png"),
     "room_bg": os.path.join(base_path, "assets", "room_bg.png"),
     "social_vs_bg": os.path.join(base_path, "assets", "social_vs_bg.png"),
     "my_room_bg": os.path.join(base_path, "assets", "my_room_bg.png"),
@@ -337,6 +338,7 @@ def safe_load_and_scale(path, target_size):
 back_button_img = safe_load_and_scale(ASSET_PATHS.get("back_button"), (33, 33))
 login_menu_bg = safe_load_and_scale(ASSET_PATHS.get("login_menu_bg"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 main_menu_bg = safe_load_and_scale(ASSET_PATHS.get("main_menu_bg"), (SCREEN_WIDTH, SCREEN_HEIGHT))
+quiz_results_bg = safe_load_and_scale(ASSET_PATHS.get("quiz_results_bg"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 social_vs_bg = safe_load_and_scale(ASSET_PATHS.get("social_vs_bg"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 pick_a_word_bg = safe_load_and_scale(ASSET_PATHS.get("pick_a_word_bg"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 select_the_meaning_bg = safe_load_and_scale(ASSET_PATHS.get("select_the_meaning_bg"), (SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -415,7 +417,7 @@ back_btn_settings = Button((20, 19, 33, 33),text='back',image_path=None)
 back_btn_my_room = Button((18, 13, 33, 33),image_path=None)
 
 level_buttons = [Button((75, 175 + i*100, 200, 60), f"{i+1}단계") for i in range(3)]
-retry_btn, main_menu_btn = Button((40, 450, 130, 50), "다시하기"), Button((180, 450, 130, 50), "메인 메뉴")
+retry_btn, main_menu_btn = Button((15, 457, 155, 66)), Button((180, 457, 155, 66))
 exit_quiz_flow_btn = Button((SCREEN_WIDTH - 100, SCREEN_HEIGHT - 60, 80, 40), "나가기", image_path=ASSET_PATHS.get("exit_button"))
 
 # 설정 토글 (이미지로 표시할 토글 경로 사용)
@@ -1006,9 +1008,10 @@ while running:
         #exit_quiz_flow_btn.draw(screen)
 
     elif scene == "quiz_results":
-        title_text = "연습 결과" if current_quiz_mode == "practice" else "테스트 결과"
-        title = font_large.render(title_text, True, COLORS['text']); screen.blit(title, title.get_rect(center=(SCREEN_WIDTH/2, 100)))
-        score_text = font_medium.render(f"총 {total_questions}문제 중 {score}개를 맞혔습니다!", True, COLORS['text']); screen.blit(score_text, score_text.get_rect(center=(SCREEN_WIDTH/2, 220)))
+        screen.blit(quiz_results_bg, (0,0))
+        #title_text = "연습 결과" if current_quiz_mode == "practice" else "테스트 결과"
+        #title = font_large.render(title_text, True, COLORS['text']); screen.blit(title, title.get_rect(center=(SCREEN_WIDTH/2, 100)))
+        score_text = font_medium.render(f"총 {total_questions}문제 중 {score}개를 맞혔습니다!", True, COLORS['text']); screen.blit(score_text, score_text.get_rect(center=(SCREEN_WIDTH/2, 240)))
         pass_threshold = total_questions * 0.1 if total_questions else 9999
         if current_quiz_mode == "practice" and score >= pass_threshold and current_level < 3 and current_level + 1 > unlocked_level:
             unlocked_level = current_level + 1
@@ -1020,13 +1023,13 @@ while running:
             save_dotori_count(total_dotori)
             unlock_message = f"해바라기씨앗 {dotori_earned}개를 획득했습니다! 🎉 (총 해바라기씨앗: {total_dotori}개)"
         msg, color = ("🎉 통과했습니다! 🎉", BLUE) if score >= pass_threshold else ("다시 도전해보세요!", RED)
-        result = font_large.render(msg, True, color); screen.blit(result, result.get_rect(center=(SCREEN_WIDTH/2, 300)))
+        result = font_large.render(msg, True, color); screen.blit(result, result.get_rect(center=(SCREEN_WIDTH/2, 320)))
         try:
             unlock_msg_render = font_tiny.render(unlock_message, True, GREEN_LIGHT)
-            screen.blit(unlock_msg_render, unlock_msg_render.get_rect(center=(SCREEN_WIDTH/2, 350)))
+            screen.blit(unlock_msg_render, unlock_msg_render.get_rect(center=(SCREEN_WIDTH/2, 370)))
         except:
             pass
-        retry_btn.draw(screen); main_menu_btn.draw(screen)
+        retry_btn.transparent_draw(screen); main_menu_btn.transparent_draw(screen)
 
     '''if quiz_bubble_visible:
         draw_quiz_bubble(screen)'''
